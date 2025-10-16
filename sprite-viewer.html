@@ -17,7 +17,14 @@
     </header>
     <article>
         <button id="selectFileBtn" style="padding: 8px 16px; background: #007acc; color: white; border: none; border-radius: 4px; cursor: pointer;">Select SVG Sprite File</button>
+        <span id="svgIdDisplay" style="margin-left: 10px; font-weight: bold; color: #666; font-size: 14px;"></span>
         <span style="flex: 1;"></span>
+        <!-- Icon Size Control -->
+         <span>
+          <label for="iconSize" style="margin-left: 20px; font-weight: bold;">Icon Size:</label>
+          <input type="range" id="iconSize" min="50" max="200" value="100" step="25" style="width: 120px; margin: 0 10px;">
+          <span id="sizeDisplay" style="min-width: 50px; font-weight: bold;">100px</span>
+        </span>
         <label for="colorSelector">Change Color</label>
         <input type="color" id="colorSelector">
         <svg class="reload" id="reloadBtn" xmlns="http://www.w3.org/2000/svg" fill="#000000" width="24px" height="24px" viewBox="4 4 24 24" style="display: none;"><title>Reload file automatically</title><path d="M27.1 14.313V5.396L24.158 8.34c-2.33-2.325-5.033-3.503-8.11-3.503C9.902 4.837 4.901 9.847 4.899 16c.001 6.152 5.003 11.158 11.15 11.16 4.276 0 9.369-2.227 10.836-8.478l.028-.122h-3.23l-.022.068c-1.078 3.242-4.138 5.421-7.613 5.421a8 8 0 0 1-5.691-2.359A7.993 7.993 0 0 1 8 16.001c0-4.438 3.611-8.049 8.05-8.049 2.069 0 3.638.58 5.924 2.573l-3.792 3.789H27.1z"/></svg>
@@ -101,9 +108,13 @@
     const sectionElem = document.getElementById("displaySection");
     const selectBtn = document.getElementById("selectFileBtn");
     const reloadBtn = document.getElementById("reloadBtn");
+    const iconSizeSlider = document.getElementById("iconSize");
+    const sizeDisplay = document.getElementById("sizeDisplay");
+    const svgIdDisplay = document.getElementById("svgIdDisplay");
     
     let currentFile = null;
     let currentFileHandle = null; // Store file handle for File System Access API
+    let currentIconSize = 100; // Track current icon size
 
     // Check if File System Access API is supported
     const supportsFileSystemAPI = 'showOpenFilePicker' in window;
@@ -124,6 +135,20 @@
             const result = event.target.result;
             const decodedResult = atob(result.replace('data:image/svg+xml;base64,', ''));
             elem.innerHTML = decodedResult;
+            
+            // Extract SVG root element ID
+            const svgElement = elem.querySelector('svg');
+            const svgId = svgElement ? svgElement.getAttribute('id') : null;
+            
+            // Display SVG ID next to file selection button
+            if (svgId) {
+                svgIdDisplay.textContent = `${svgId}`;
+                svgIdDisplay.style.color = '#007acc';
+            } else {
+                svgIdDisplay.textContent = '(No ID)';
+                svgIdDisplay.style.color = '#999';
+            }
+            
             const symbols = elem.getElementsByTagName('symbol');
 
             sectionElem.innerHTML = "";
@@ -135,8 +160,8 @@
                 const fillVal = element.getAttribute('fill') || "";
                 const strokeVal = element.getAttribute('stroke') || "";
                 createdStr += `
-                <span style="display:inline-flex;flex-direction: column;align-items: center;margin: 10px;border: 1px solid lightgray;padding: 5px;font-family: monospace;">
-                    <svg width="100px" height="100px"
+                <span class="icon-container" style="display:inline-flex;flex-direction: column;align-items: center;margin: 10px;border: 1px solid lightgray;padding: 5px;font-family: monospace;">
+                    <svg width="${currentIconSize}px" height="${currentIconSize}px"
                     viewBox='${element.viewBox.baseVal.x * zoomfactor+" "+element.viewBox.baseVal.y * zoomfactor+" "+element.viewBox.baseVal.width * zoomfactor+" "+element.viewBox.baseVal.height * zoomfactor}'
                     fill='${fillVal}' stroke='${strokeVal}'>
                         <title>${element.id}</title>
@@ -265,6 +290,19 @@
     // Color selector handler
     document.getElementById('colorSelector').addEventListener('input', (evt) => {
         sectionElem.style.color = evt.target.value
-    })
+    });
+
+    // Icon size slider handler
+    iconSizeSlider.addEventListener('input', (e) => {
+        currentIconSize = parseInt(e.target.value);
+        sizeDisplay.textContent = currentIconSize + 'px';
+        
+        // Update existing icons if any are displayed
+        const iconContainers = sectionElem.querySelectorAll('.icon-container svg');
+        iconContainers.forEach(svg => {
+            svg.setAttribute('width', currentIconSize + 'px');
+            svg.setAttribute('height', currentIconSize + 'px');
+        });
+    });
 </script>
 </html>
