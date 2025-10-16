@@ -102,6 +102,30 @@
     .reload {
         cursor: pointer;
     }
+
+    /* Icon container copy feedback */
+    .icon-container {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .icon-container:hover {
+        background-color: #f0f8ff;
+        border-color: #007acc;
+        transform: scale(1.02);
+    }
+
+    .icon-container.copied {
+        background-color: #d4edda;
+        border-color: #28a745;
+        animation: copyFlash 0.6s ease;
+    }
+
+    @keyframes copyFlash {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); background-color: #c3e6cb; }
+        100% { transform: scale(1); }
+    }
 </style>
 <script>
     const elem = document.getElementById("displayelement");
@@ -126,6 +150,36 @@
     } else {
         reloadBtn.style.display = 'none';
         console.log('⚠️ File System Access API not supported - using fallback method');
+    }
+
+    // Copy SVG code to clipboard
+    async function copySVGCode(element, container) {
+        try {
+            // Create a complete SVG with viewBox and content
+            const viewBox = element.viewBox?.baseVal 
+                ? `${element.viewBox.baseVal.x} ${element.viewBox.baseVal.y} ${element.viewBox.baseVal.width} ${element.viewBox.baseVal.height}`
+                : '0 0 24 24';
+            
+            const svgCode = `<svg viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">${element.innerHTML}</svg>`;
+            
+            // Copy to clipboard
+            await navigator.clipboard.writeText(svgCode);
+            
+            // Visual feedback
+            container.classList.add('copied');
+            
+            // Show success popup
+            showPopup(`📋 Copied "${element.id}" SVG code to clipboard!`, '', '', 2000);
+            
+            // Remove copied class after animation
+            setTimeout(() => {
+                container.classList.remove('copied');
+            }, 600);
+            
+        } catch (err) {
+            console.error('Failed to copy SVG code:', err);
+            showPopup('❌ Failed to copy SVG code. Your browser may not support clipboard access.', '', '', 3000);
+        }
     }
 
     // Function to process and display SVG content
@@ -160,7 +214,7 @@
                 const fillVal = element.getAttribute('fill') || "";
                 const strokeVal = element.getAttribute('stroke') || "";
                 createdStr += `
-                <span class="icon-container" style="display:inline-flex;flex-direction: column;align-items: center;margin: 10px;border: 1px solid lightgray;padding: 5px;font-family: monospace;">
+                <span class="icon-container" data-symbol-index="${index}" style="display:inline-flex;flex-direction: column;align-items: center;margin: 10px;border: 1px solid lightgray;padding: 5px;font-family: monospace;" title="Click to copy SVG code">
                     <svg width="${currentIconSize}px" height="${currentIconSize}px"
                     viewBox='${element.viewBox.baseVal.x * zoomfactor+" "+element.viewBox.baseVal.y * zoomfactor+" "+element.viewBox.baseVal.width * zoomfactor+" "+element.viewBox.baseVal.height * zoomfactor}'
                     fill='${fillVal}' stroke='${strokeVal}'>
@@ -168,9 +222,20 @@
                         ${element.innerHTML}
                     </svg>
                     <span>${element.id}</span>
+                    <small style="color: #666; font-size: 10px;">Click to copy</small>
                 </span>`;
             }
             sectionElem.innerHTML += createdStr;
+            
+            // Add click handlers to all icon containers
+            const iconContainers = sectionElem.querySelectorAll('.icon-container');
+            iconContainers.forEach((container, index) => {
+                container.addEventListener('click', () => {
+                    const element = symbols[index];
+                    copySVGCode(element, container);
+                });
+            });
+            
             showPopup(`Loaded ${symbols.length} symbols from sprite file at ${new Date().toLocaleTimeString()}`);
         });
         reader.readAsDataURL(file);
